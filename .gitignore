@@ -1,0 +1,12 @@
+# Archivos de cache de Python
+__pycache__/
+*.pyc
+
+# Carpetas de entornos virtuales
+.venv
+venv/
+
+# Carpetas de compilación de PyInstaller
+build/
+dist/
+*.spec
