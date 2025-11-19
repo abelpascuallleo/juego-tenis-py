@@ -1,3 +1,6 @@
+# Copyright (c) 2024 abel
+# Este software se distribuye bajo la Licencia MIT.
+# Ver el archivo LICENSE para más detalles.
 import pygame
 import sys
 import random
