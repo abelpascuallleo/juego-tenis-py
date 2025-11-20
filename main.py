@@ -3,6 +3,7 @@
 # Ver el archivo LICENSE para más detalles.
 import pygame
 import sys
+import os
 import random
 
 # --- Constantes ---
@@ -18,6 +19,7 @@ TAMANO_BOLA = 20
 ANCHO_PALA = 15
 ALTO_PALA = 100
 PUNTUACION_GANADORA = 5
+VELOCIDAD_JUGADOR = 10 # Velocidad de movimiento para las palas de los jugadores
 
 # --- Diccionario de Dificultades ---
 DIFICULTADES = {
@@ -27,6 +29,17 @@ DIFICULTADES = {
 }
 
 # --- Clases del Juego ---
+
+def resource_path(relative_path):
+    """ Obtiene la ruta absoluta al recurso, funciona para desarrollo y para PyInstaller """
+    try:
+        # PyInstaller crea una carpeta temporal y guarda la ruta en _MEIPASS (o similar)
+        base_path = sys._MEIPASS # type: ignore
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
 
 class Ball:
     def __init__(self, x, y, size, speed):
@@ -43,21 +56,17 @@ class Ball:
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
 
-    def check_wall_collision(self, sound):
+    def check_wall_collision(self):
         if self.rect.top <= 0 or self.rect.bottom >= ALTO_PANTALLA:
             self.speed_y *= -1
-            sound.play()
 
-    def reset(self, sound):
-        sound.play()
-        self.rect.center = (ANCHO_PANTALLA / 2, ALTO_PANTALLA / 2)
-        pygame.time.delay(1000)
+    def reset(self):
+        self.rect.center = (int(ANCHO_PANTALLA / 2), int(ALTO_PANTALLA / 2))
         self.speed_x = self.initial_speed * random.choice((1, -1))
         self.speed_y = self.initial_speed * random.choice((1, -1))
-        self.trail = [] # Limpiamos la estela al reiniciar
+        self.trail = []
 
-    def bounce(self, paddle, sound):
-        sound.play()
+    def bounce(self, paddle, particle_list):
         # Aumentamos la velocidad con cada golpe, con un límite.
         acceleration_factor = 1.05
         max_speed_x = 15 # Límite de velocidad horizontal
@@ -74,6 +83,14 @@ class Ball:
         bounce_factor = diff_y / (paddle.rect.height / 2)
         # La velocidad vertical ahora depende de la velocidad horizontal actual para mantener la proporción.
         self.speed_y = bounce_factor * abs(self.speed_x)
+
+        # --- Creación de Partículas ---
+        # Determinamos la dirección de las partículas (lejos de la pala)
+        particle_direction = 1 if self.rect.centerx < ANCHO_PANTALLA / 2 else -1
+        # Creamos entre 10 y 15 partículas
+        for _ in range(random.randint(10, 15)):
+            particle = Particle(self.rect.centerx, self.rect.centery, particle_direction)
+            particle_list.append(particle)
         
     def draw(self, screen):
         # Dibujamos la estela
@@ -99,9 +116,16 @@ class Paddle:
             self.rect.bottom = ALTO_PANTALLA
 
 class PlayerPaddle(Paddle):
-    def update(self, event):
-        if event.type == pygame.MOUSEMOTION:
-            self.rect.centery = event.pos[1]
+    def __init__(self, x, y, width, height, speed):
+        super().__init__(x, y, width, height)
+        self.speed = speed
+
+    def update(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_UP]:
+            self.rect.y -= self.speed
+        if keys[pygame.K_DOWN]:
+            self.rect.y += self.speed
         self.keep_in_bounds()
 
 class OpponentPaddle(Paddle):
@@ -116,35 +140,38 @@ class OpponentPaddle(Paddle):
             self.rect.y -= self.speed
         self.keep_in_bounds()
 
-class PlayerTwoPaddle(Paddle):
-    def __init__(self, x, y, width, height, speed):
-        super().__init__(x, y, width, height)
-        self.speed = speed
+class Particle:
+    def __init__(self, x, y, direction):
+        self.x = x
+        self.y = y
+        # Partículas pequeñas de 2 a 4 píxeles
+        self.size = random.randint(2, 4)
+        # La velocidad horizontal es en la dirección opuesta al golpe
+        self.speed_x = direction * random.uniform(1, 4)
+        # La velocidad vertical es aleatoria hacia arriba o abajo
+        self.speed_y = random.uniform(-3, 3)
+        # Tiempo de vida en fotogramas (aprox. medio segundo a 60 FPS)
+        self.lifespan = 30
 
     def update(self):
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_w]:
-            self.rect.y -= self.speed
-        if keys[pygame.K_s]:
-            self.rect.y += self.speed
-        self.keep_in_bounds()
+        self.x += self.speed_x
+        self.y += self.speed_y
+        self.lifespan -= 1
 
-def menu_principal(pantalla):
+    def draw(self, screen):
+        pygame.draw.rect(screen, BLANCO, (self.x, self.y, self.size, self.size))
+
+def menu_principal(pantalla, fuentes):
     """
     Muestra el menú de inicio y espera a que el jugador haga clic en "Jugar".
     """
-    fuente_titulo = pygame.font.Font(None, 74)
-    fuente_boton = pygame.font.Font(None, 50)
     reloj = pygame.time.Clock()
 
-    titulo_texto = fuente_titulo.render("TENIS", True, BLANCO)
-    rect_titulo = titulo_texto.get_rect(center=(ANCHO_PANTALLA / 2, ALTO_PANTALLA / 2 - 150))
+    titulo_texto = fuentes["titulo"].render("TENIS", True, BLANCO)
+    rect_titulo = titulo_texto.get_rect(center=(ANCHO_PANTALLA / 2, ALTO_PANTALLA / 2 - 100))
 
-    # Crear botones para cada modo de juego
-    botones = {
-        "1 Jugador": pygame.Rect(ANCHO_PANTALLA / 2 - 150, ALTO_PANTALLA / 2 - 50, 300, 60),
-        "2 Jugadores": pygame.Rect(ANCHO_PANTALLA / 2 - 150, ALTO_PANTALLA / 2 + 30, 300, 60),
-    }
+    # Crear botón para jugar
+    boton_jugar = pygame.Rect(ANCHO_PANTALLA / 2 - 150, ALTO_PANTALLA / 2, 300, 60)
 
     while True:
         for event in pygame.event.get():
@@ -152,31 +179,25 @@ def menu_principal(pantalla):
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                if botones["1 Jugador"].collidepoint(event.pos):
-                    return "1_jugador"
-                if botones["2 Jugadores"].collidepoint(event.pos):
-                    return "2_jugadores"
+                if boton_jugar.collidepoint(event.pos):
+                    return # Sale de la función para continuar
 
         pantalla.fill(NEGRO)
         pantalla.blit(titulo_texto, rect_titulo)
 
-        # Dibujar cada botón
-        for texto, rect in botones.items():
-            pygame.draw.rect(pantalla, BLANCO, rect)
-            texto_boton = fuente_boton.render(texto, True, NEGRO)
-            rect_texto_boton = texto_boton.get_rect(center=rect.center)
-            pantalla.blit(texto_boton, rect_texto_boton)
+        pygame.draw.rect(pantalla, BLANCO, boton_jugar)
+        texto_boton = fuentes["boton"].render("Jugar", True, NEGRO)
+        rect_texto_boton = texto_boton.get_rect(center=boton_jugar.center)
+        pantalla.blit(texto_boton, rect_texto_boton)
 
         pygame.display.flip()
         reloj.tick(60)
 
-def menu_dificultad(pantalla):
+def menu_dificultad(pantalla, fuentes):
     """Muestra el menú para elegir dificultad y devuelve la selección."""
-    fuente_titulo = pygame.font.Font(None, 74)
-    fuente_boton = pygame.font.Font(None, 50)
     reloj = pygame.time.Clock()
 
-    titulo_texto = fuente_titulo.render("ELIGE LA DIFICULTAD", True, BLANCO)
+    titulo_texto = fuentes["titulo"].render("ELIGE LA DIFICULTAD", True, BLANCO)
     rect_titulo = titulo_texto.get_rect(center=(ANCHO_PANTALLA / 2, ALTO_PANTALLA / 2 - 150))
 
     # Crear botones para cada dificultad
@@ -203,31 +224,29 @@ def menu_dificultad(pantalla):
         # Dibujar cada botón
         for dificultad, rect in botones.items():
             pygame.draw.rect(pantalla, BLANCO, rect)
-            texto_boton = fuente_boton.render(dificultad.capitalize(), True, NEGRO)
+            texto_boton = fuentes["boton"].render(dificultad.capitalize(), True, NEGRO)
             rect_texto_boton = texto_boton.get_rect(center=rect.center)
             pantalla.blit(texto_boton, rect_texto_boton)
 
         pygame.display.flip()
         reloj.tick(60)
 
-def pantalla_fin_juego(pantalla, ganador_texto):
+def pantalla_fin_juego(pantalla, ganador_texto, fuentes):
     """
     Muestra la pantalla de fin de juego con opciones para rejugar o volver al menú.
     Devuelve True si se quiere volver a jugar, False para volver al menú.
     """
-    fuente_grande = pygame.font.Font(None, 74)
-    fuente_boton = pygame.font.Font(None, 50)
     reloj = pygame.time.Clock()
 
-    texto_ganador = fuente_grande.render(ganador_texto, True, BLANCO)
+    texto_ganador = fuentes["titulo"].render(ganador_texto, True, BLANCO)
     rect_ganador = texto_ganador.get_rect(center=(ANCHO_PANTALLA / 2, ALTO_PANTALLA / 2 - 100))
 
     boton_rejugar = pygame.Rect(ANCHO_PANTALLA / 2 - 150, ALTO_PANTALLA / 2 + 50, 300, 60)
-    texto_rejugar = fuente_boton.render("Volver a Jugar", True, NEGRO)
+    texto_rejugar = fuentes["boton"].render("Volver a Jugar", True, NEGRO)
     rect_texto_rejugar = texto_rejugar.get_rect(center=boton_rejugar.center)
 
     boton_menu = pygame.Rect(ANCHO_PANTALLA / 2 - 150, ALTO_PANTALLA / 2 + 130, 300, 60)
-    texto_menu = fuente_boton.render("Menú Principal", True, NEGRO)
+    texto_menu = fuentes["boton"].render("Menú Principal", True, NEGRO)
     rect_texto_menu = texto_menu.get_rect(center=boton_menu.center)
 
     while True:
@@ -251,106 +270,96 @@ def pantalla_fin_juego(pantalla, ganador_texto):
         pygame.display.flip()
         reloj.tick(60)
 
-def game_loop(pantalla, game_mode, dificultad=None):
+def game_loop(pantalla, dificultad, fuentes):
     """
     Esta es la función principal que contendrá nuestro juego.
     """
     # --- Configuración basada en el modo de juego y la dificultad ---
-    if game_mode == "1_jugador":
-        config = DIFICULTADES[dificultad]
-        oponente_velocidad = config["oponente_velocidad"]
-        bola_velocidad_inicial = config["bola_velocidad"]
-    else: # 2 Jugadores
-        # Usamos la dificultad media por defecto para el modo 2 jugadores
-        oponente_velocidad = 7 
-        bola_velocidad_inicial = DIFICULTADES["medio"]["bola_velocidad"]
+    config = DIFICULTADES[dificultad]
+    oponente_velocidad = config["oponente_velocidad"]
+    bola_velocidad_inicial = config["bola_velocidad"]
 
+    # --- Creación de los Objetos del Juego usando Clases ---
+    ball = Ball(ANCHO_PANTALLA / 2 - TAMANO_BOLA / 2, ALTO_PANTALLA / 2 - TAMANO_BOLA / 2, TAMANO_BOLA, bola_velocidad_inicial)
+    player = PlayerPaddle(ANCHO_PANTALLA - ANCHO_PALA - 20, ALTO_PANTALLA / 2 - ALTO_PALA / 2, ANCHO_PALA, ALTO_PALA, VELOCIDAD_JUGADOR)
+    opponent = OpponentPaddle(20, ALTO_PANTALLA / 2 - ALTO_PALA / 2, ANCHO_PALA, ALTO_PALA, oponente_velocidad)
+
+    # --- Variables de Puntuación y Estado ---
+    puntuacion_jugador = 0
+    puntuacion_oponente = 0
+    paused = False
+    reset_timer = 0 # Temporizador para el reinicio de la bola
+
+    # --- Control de Tiempo ---
+    reloj = pygame.time.Clock()
+
+    # --- Lista para Partículas ---
+    particles = []
+
+    # --- Bucle de Partida Individual ---
     while True:
-        # --- Creación de los Objetos del Juego usando Clases ---
-        ball = Ball(ANCHO_PANTALLA / 2 - TAMANO_BOLA / 2, ALTO_PANTALLA / 2 - TAMANO_BOLA / 2, TAMANO_BOLA, bola_velocidad_inicial)
-        player = PlayerPaddle(ANCHO_PANTALLA - ANCHO_PALA - 20, ALTO_PANTALLA / 2 - ALTO_PALA / 2, ANCHO_PALA, ALTO_PALA)
-        
-        if game_mode == "1_jugador":
-            opponent = OpponentPaddle(20, ALTO_PANTALLA / 2 - ALTO_PALA / 2, ANCHO_PALA, ALTO_PALA, oponente_velocidad)
-        else: # 2 Jugadores
-            opponent = PlayerTwoPaddle(20, ALTO_PANTALLA / 2 - ALTO_PALA / 2, ANCHO_PALA, ALTO_PALA, oponente_velocidad)
+        # --- Manejo de Eventos ---
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_p:
+                    paused = not paused
+                if event.key == pygame.K_x:
+                    return # Salimos de game_loop para volver al menú principal
 
-        # --- Variables de Puntuación y Texto ---
-        puntuacion_jugador = 0
-        puntuacion_oponente = 0
-        # Usamos la fuente por defecto de Pygame. Tamaño 32.
-        fuente_juego = pygame.font.Font(None, 74)
+        # Si hay un temporizador de reinicio, no hacemos nada más hasta que termine
+        if reset_timer > pygame.time.get_ticks():
+            pygame.display.flip()
+            reloj.tick(60)
+            continue
 
-        # --- Variables de Estado ---
-        paused = False
-        fuente_pausa = pygame.font.Font(None, 74)
-        fuente_info = pygame.font.Font(None, 24)
+        if not paused:
+            # --- Lógica del Juego ---
+            player.update()
+            ball.move()
+            opponent.update(ball)
+            
+            ball.check_wall_collision()
+            
+            if ball.rect.colliderect(player.rect):
+                ball.bounce(player, particles)
+            if ball.rect.colliderect(opponent.rect):
+                ball.bounce(opponent, particles)
 
-        # --- Carga de Sonidos ---
-        try:
-            pong_sound = pygame.mixer.Sound("pong.ogg")
-            score_sound = pygame.mixer.Sound("score.ogg")
-        except (pygame.error, FileNotFoundError):
-            print("¡Advertencia! No se pudieron cargar los archivos de sonido 'pong.ogg' o 'score.ogg'.")
-            # Creamos sonidos 'dummy' para que el juego no se bloquee.
-            pong_sound = score_sound = type('DummySound', (), {'play': lambda self: None})()
-
-        # --- Control de Tiempo ---
-        reloj = pygame.time.Clock()
-
-        # --- Bucle de Partida Individual ---
-        while True:
-            # --- Manejo de Eventos ---
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_p:
-                        paused = not paused
-                    if event.key == pygame.K_x:
-                        return # Salimos de game_loop para volver al menú principal
-                if not paused:
-                    player.update(event)
-
-            if not paused:
-                # --- Lógica del Juego ---
-                ball.move()
-                if game_mode == "1_jugador":
-                    opponent.update(ball)
-                else:
-                    opponent.update() # El jugador 2 se actualiza con el teclado
-
-                # Lógica de rebote en paredes y palas
-                ball.check_wall_collision(pong_sound)
-                
-                if ball.rect.colliderect(player.rect):
-                    ball.bounce(player, pong_sound)
-                if ball.rect.colliderect(opponent.rect):
-                    ball.bounce(opponent, pong_sound)
-
-                # Lógica de Puntuación
+            # Lógica de Puntuación
+            if ball.rect.right >= ANCHO_PANTALLA or ball.rect.left <= 0:
                 if ball.rect.right >= ANCHO_PANTALLA:
                     puntuacion_oponente += 1
-                    ball.reset(score_sound)
-                if ball.rect.left <= 0:
+                else:
                     puntuacion_jugador += 1
-                    ball.reset(score_sound)
+                ball.reset()
+                reset_timer = pygame.time.get_ticks() + 1000 # Esperar 1 segundo
+            else:
+                # Actualizar partículas
+                for particle in particles:
+                    particle.update()
+                # Eliminar partículas muertas (con list comprehension para eficiencia)
+                particles = [p for p in particles if p.lifespan > 0]
 
             # --- Dibujo ---
             pantalla.fill(NEGRO)
             player.draw(pantalla)
             opponent.draw(pantalla)
             ball.draw(pantalla)
+            # Dibujar partículas
+            for particle in particles:
+                particle.draw(pantalla)
             pygame.draw.aaline(pantalla, BLANCO, (ANCHO_PANTALLA / 2, 0), (ANCHO_PANTALLA / 2, ALTO_PANTALLA))
 
-            texto_jugador = fuente_juego.render(f"{puntuacion_jugador}", False, BLANCO)
+            texto_jugador = fuentes["juego"].render(f"{puntuacion_jugador}", False, BLANCO)
             pantalla.blit(texto_jugador, (ANCHO_PANTALLA / 2 + 20, 20))
-            texto_oponente = fuente_juego.render(f"{puntuacion_oponente}", False, BLANCO)
+            texto_oponente = fuentes["juego"].render(f"{puntuacion_oponente}", False, BLANCO)
             pantalla.blit(texto_oponente, (ANCHO_PANTALLA / 2 - 50, 20))
 
             # Dibujamos el texto de ayuda en la parte superior
-            info_texto = fuente_info.render("Exit: Tecla X | Pause: Tecla P", True, BLANCO)
+            info_texto = fuentes["info"].render("Mover: ↑/↓ | Salir: X | Pausa: P", True, BLANCO)
             pantalla.blit(info_texto, (10, 10))
 
             # --- Comprobación de Fin de Juego ---
@@ -360,27 +369,21 @@ def game_loop(pantalla, game_mode, dificultad=None):
                 overlay.fill((0, 0, 0, 150)) # Negro con 150 de alpha (0-255)
                 pantalla.blit(overlay, (0, 0))
                 # Dibujamos el texto de pausa
-                texto_pausa = fuente_pausa.render("PAUSA", True, BLANCO)
+                texto_pausa = fuentes["titulo"].render("PAUSA", True, BLANCO)
                 rect_pausa = texto_pausa.get_rect(center=(ANCHO_PANTALLA / 2, ALTO_PANTALLA / 2))
                 pantalla.blit(texto_pausa, rect_pausa)
 
             ganador_texto = ""
             if puntuacion_jugador >= PUNTUACION_GANADORA:
-                if game_mode == "2_jugadores":
-                    ganador_texto = "¡Jugador 1 Gana!"
-                else:
-                    ganador_texto = "¡Has ganado!"
+                ganador_texto = "¡Has ganado!"
             if puntuacion_oponente >= PUNTUACION_GANADORA:
-                if game_mode == "2_jugadores":
-                    ganador_texto = "¡Jugador 2 Gana!"
-                else:
-                    ganador_texto = "¡Has perdido!"
-
+                ganador_texto = "¡Has perdido!"
+                
             if ganador_texto:
-                if not pantalla_fin_juego(pantalla, ganador_texto):
+                if not pantalla_fin_juego(pantalla, ganador_texto, fuentes):
                     return # Si el jugador elige "Menú Principal", salimos de game_loop
                 else:
-                    break # Si elige "Volver a Jugar", rompemos el bucle de la partida
+                    game_loop(pantalla, dificultad, fuentes) # Reiniciamos el juego
 
             # --- Actualización de la Pantalla ---
             pygame.display.flip()
@@ -389,7 +392,6 @@ def game_loop(pantalla, game_mode, dificultad=None):
 if __name__ == '__main__':
     # --- Inicialización General ---
     pygame.init()
-    pygame.mixer.init() # Inicializamos el mezclador de sonido
     # Creamos la superficie principal donde dibujaremos todo.
     pantalla = pygame.display.set_mode((ANCHO_PANTALLA, ALTO_PANTALLA))
     # Le damos un título a la ventana.
@@ -397,19 +399,24 @@ if __name__ == '__main__':
 
     # --- Cargar Icono ---
     try:
-        icon = pygame.image.load("icon.ico")
+        icon = pygame.image.load(resource_path("icon.ico"))
         pygame.display.set_icon(icon)
     except (pygame.error, FileNotFoundError):
         print("¡Advertencia! No se pudo cargar el archivo de icono 'icon.ico'.")
 
+    # --- Cargar Fuentes una sola vez ---
+    fuentes = {
+        "titulo": pygame.font.Font(None, 74),
+        "boton": pygame.font.Font(None, 50),
+        "juego": pygame.font.Font(None, 74),
+        "info": pygame.font.Font(None, 24)
+    }
+
     # Bucle principal del programa
     while True:
-        game_mode = menu_principal(pantalla)
-        if game_mode == "1_jugador":
-            dificultad_elegida = menu_dificultad(pantalla)
-            game_loop(pantalla, game_mode, dificultad_elegida)
-        else: # 2 Jugadores
-            game_loop(pantalla, game_mode)
+        menu_principal(pantalla, fuentes)
+        dificultad_elegida = menu_dificultad(pantalla, fuentes)
+        game_loop(pantalla, dificultad_elegida, fuentes)
 
         # Cuando game_loop termina (porque el usuario eligió "Menú Principal"),
         # el bucle vuelve a empezar, mostrando de nuevo el menú de inicio.

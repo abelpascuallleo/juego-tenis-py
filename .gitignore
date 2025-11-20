@@ -1,12 +1,17 @@
-# Archivos de cache de Python
-__pycache__/
-*.pyc
-
-# Carpetas de entornos virtuales
-.venv
+# Entornos virtuales de Python
 venv/
 
-# Carpetas de compilación de PyInstaller
+# Archivos de caché de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos generados por PyInstaller
+*.spec
 build/
 dist/
-*.spec
+
+# Archivos de caché de Pytest
+.pytest_cache/
+.coverage
