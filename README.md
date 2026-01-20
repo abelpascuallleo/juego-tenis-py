@@ -33,16 +33,7 @@ A lo largo del desarrollo, se han implementado las siguientes funcionalidades:
 
 ## Instalación y Ejecución
 
-### Opción 1: Ejecutable para Windows
-
-Para usuarios de Windows, la forma más sencilla es descargar el archivo ejecutable. No se necesita instalar Python ni ninguna librería.
-
-**Descargar el ejecutable**
-    [Descargar el ejecutable aquí](./dist/main.exe)
-
-### Opción 2: Desde el Código Fuente
-
-Si tienes Python instalado y quieres ejecutar el juego desde el código, sigue estos pasos.
+Instala Python y ejecuta el juego desde el propio código, siguiendo estos pasos:
 
 **Requisitos:**
 
