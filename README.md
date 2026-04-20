@@ -1,85 +1,67 @@
-# Tenis con Pygame
+# 🎾 Tenis PY
 
-Un clásico juego de Pong implementado en Python utilizando la librería Pygame. Este proyecto ha sido desarrollado con un enfoque en la claridad del código, la modularidad y la inclusión de características modernas como efectos de partículas y un sistema de menús.
+¡Bienvenido a **Tenis PY**! Una versión moderna y altamente optimizada del clásico juego de Pong, construida con Python y Pygame. 
 
-![Captura del Juego](./assets/juego%20tenis.png)
-
----
-
-## Características Implementadas
-
-A lo largo del desarrollo, se han implementado las siguientes funcionalidades:
-
-- **Jugabilidad Clásica**: Modo de un jugador contra una pala controlada por la IA.
-- **Sistema de Dificultad**: Tres niveles de dificultad (Fácil, Medio, Difícil) que ajustan la velocidad de la IA y de la bola.
-- **Menús Interactivos**:
-  - Menú principal para iniciar el juego.
-  - Menú de selección de dificultad.
-  - Pantalla de fin de partida con opciones para "Volver a Jugar" o ir al "Menú Principal".
-- **Controles por Teclado**: La pala del jugador se controla con las flechas de arriba y abajo (↑/↓).
-- **Efectos Visuales**:
-  - **Partículas**: Una explosión de partículas se genera cada vez que la bola golpea una pala, añadiendo un feedback visual dinámico.
-  - **Estela de la Bola**: La bola deja una estela que se desvanece para dar una mejor sensación de movimiento y velocidad.
-- **Sistema de Puntuación**: El primer jugador en alcanzar los 5 puntos gana la partida.
-- **Pausa**: El juego se puede pausar en cualquier momento presionando la tecla 'P'.
-- **Código Optimizado y Estructurado**:
-  - **Programación Orientada a Objetos (POO)**: El juego está dividido en clases (`Ball`, `Paddle`, `Particle`) para una mejor organización.
-  - **Carga Eficiente de Recursos**: Las fuentes se cargan una sola vez al inicio para mejorar el rendimiento.
-  - **Lógica de Juego sin Bloqueos**: Se usan temporizadores no bloqueantes para los reinicios de la bola, permitiendo que el juego siga siendo responsivo.
-- **Empaquetado para Distribución**: El código está preparado para ser empaquetado en un archivo `.exe` con PyInstaller.
-- **Pruebas Automatizadas**: Se ha configurado `pytest` con una suite de pruebas inicial para verificar la lógica principal del juego (movimiento, colisiones, etc.).
+Esta versión ha sido refactorizada para ofrecer una experiencia fluida e independiente de la tasa de frames (Delta Time), una arquitectura modular y efectos visuales mejorados.
 
 ---
 
-## Instalación y Ejecución
+## ✨ Características
 
-Instala Python y ejecuta el juego desde el propio código, siguiendo estos pasos:
-
-**Requisitos:**
-
-- Python 3.8 o superior
-- `pip` (el gestor de paquetes de Python)
-
-**Pasos:**
-
-1. **Clona o descarga el repositorio:**
-
-    ```bash
-    # Si usas git
-    git clone https://github.com/tu-usuario/tu-repositorio.git
-    cd tu-repositorio
-    ```
-
-2. **Crea un entorno virtual (recomendado):**
-
-    ```bash
-    python -m venv venv
-    # En Windows
-    .\venv\Scripts\activate
-    ```
-
-3. **Instala las dependencias:**
-
-    ```bash
-    pip install pygame
-    ```
-
-4. **Ejecuta el juego:**
-
-    ```bash
-    python main.py
-    ```
+- 🚀 **Delta Time:** Jugabilidad fluida a cualquier FPS.
+- 🏗️ **Arquitectura Modular:** Código limpio dividido en `settings`, `entities` y `ui`.
+- 🎮 **3 Niveles de Dificultad:** Fácil, Medio y Difícil.
+- 🎨 **Efectos Visuales:** Sistema de partículas en colisiones y estela de movimiento para la bola.
+- ⌨️ **Controles Intuitivos:** Usa las flechas del teclado para dominar la pista.
 
 ---
 
-## Controles
+## 🛠️ Instalación
 
-- **Mover la pala**: Flecha Arriba (↑) / Flecha Abajo (↓)
-- **Pausar / Reanudar**: Tecla `P`
-- **Salir al Menú Principal**: Tecla `X` (durante una partida)
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/a921-h/juego-tenis-py.git
+   cd juego-tenis-py
+   ```
+
+2. **Instalar dependencias:**
+   Se recomienda usar Python 3.11 o superior.
+   ```bash
+   pip install -r requirements.txt
+   ```
+   *Nota: Si usas Python 3.14+, se recomienda `pip install pygame-ce`.*
+
+3. **Ejecutar el juego:**
+   ```bash
+   python main.py
+   ```
 
 ---
 
-## Licencia
+## 🎮 Cómo Jugar
 
-Este proyecto se distribuye bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+| Acción | Tecla |
+| :--- | :--- |
+| **Mover Arriba** | `↑` (Flecha Arriba) |
+| **Mover Abajo** | `↓` (Flecha Abajo) |
+| **Salir al Menú** | `X` |
+| **Pausar** | `P` |
+
+---
+
+## 📁 Estructura del Proyecto
+
+- `main.py`: Punto de entrada y bucle principal del juego.
+- `settings.py`: Constantes, colores y configuraciones.
+- `entities.py`: Lógica de Sprites (Bola, Palas y Partículas).
+- `ui.py`: Gestión de menús y pantallas de estado.
+- `assets/`: Recursos gráficos y sonidos.
+
+---
+
+## 📝 Licencia
+
+Este proyecto está bajo la licencia **MIT**. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+
+---
+*Desarrollado con ❤️ por Abel.*
